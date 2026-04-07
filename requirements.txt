@@ -1,0 +1,28 @@
+# Data Sources
+akshare>=1.18.0
+
+# Options Pricing & Greeks
+py_vollib>=1.0.3
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+
+# LLM
+anthropic>=0.50.0
+zhipuai>=2.0.0
+
+# Scheduling
+apscheduler>=3.10.0
+
+# Database
+sqlalchemy>=2.0.0
+
+# Configuration
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+
+# HTTP (WeChat webhook)
+requests>=2.31.0
+
+# Testing
+pytest>=7.4.0

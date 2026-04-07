@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+data/trading.db
+data/cache/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
