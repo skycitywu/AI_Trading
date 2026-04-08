@@ -1,6 +1,6 @@
 # 项目进度
 
-## 当前状态：Phase 1 MVP 完成 + 首次真实运行验证 ✅
+## 当前状态：Phase 1 完整打通，企业微信通知上线 ✅
 
 ---
 
@@ -45,7 +45,7 @@
 - [x] 数据获取测试：50ETF 42个合约，白糖178个，铜434个
 - [x] 四阶段端到端 Mock 测试通过（上下文约 6KB，< 3000 tokens）
 
-### Phase 1.5：首次真实运行（2026-04-08）
+### Phase 1.5：首次真实运行 + 通知打通（2026-04-08）
 - [x] 修复 `requirements.txt`：`py_vollib` 版本约束从 `>=1.0.3` 改为 `>=1.0.0`（PyPI 最新只有 1.0.1）
 - [x] LLM 配置外部化：`config/settings.py` 新增 `llm_api_base_url` / `llm_model` 字段，从 `.env` 读取，不再硬编码
 - [x] ETF 数据获取增强：`fund_etf_hist_em`（东方财富） → `stock_zh_a_hist` → `fund_etf_hist_sina`（新浪）三级降级，解决东方财富接口偶发断连
@@ -53,6 +53,9 @@
 - [x] 文件日志：每次运行在 `logs/` 下生成带时间戳的 `.log` 文件，终端输出 INFO，文件记录 DEBUG（含提示词、LLM 原始返回）
 - [x] 信号详情打印：`run_once.py` 末尾打印市场评估 + 信号腿/理由/风险提示
 - [x] 全流程真实验证：GLM-4.5-air 成功返回信号（sell strangle 50ETF，IV分位72%）
+- [x] 企业微信通知打通：配置群机器人 Webhook（企业微信"消息推送"功能，原"群机器人"）
+- [x] 通知格式优化：合约操作腿显示名称（如"50ETF沽4月3000"）而非纯数字代码；urgency 字段汉化（within_session→当日内等）
+  - 修改范围：`SignalLeg` 加 `name` 字段、LLM prompt schema 加 `name`、`signal_parser` 解析 `name`、`formatter` 加 `URGENCY_MAP`
 
 ---
 
@@ -75,13 +78,14 @@
 优先级从高到低：
 
 1. **[x] 完整测试**：配置真实 LLM API key（智谱 GLM-4.5-air），全流程跑通，信号质量待持续评估
-2. **[ ] SHFE 铜 IV 补充**：集成 `option_vol_shfe()` 获取隐含波动率
-3. **[ ] 历史 IV 数据**：接入 QVIX 或其他历史 IV 数据源，提升 IV 分位数准确性
-2. **[ ] 企业微信通知**：配置真实 Webhook URL，验证通知推送
-3. **[ ] SHFE 铜 IV 补充**：集成 `option_vol_shfe()` 获取隐含波动率
-4. **[ ] SQLite 持久化**：实现 `src/database/`，存储历史信号
-5. **[ ] APScheduler 定时任务**：实现 `scripts/run_daemon.py`
-6. **[ ] 信号去重**：避免同一机会在多次扫描中重复推送
+2. **[x] 企业微信通知**：配置真实 Webhook URL，验证通知推送，优化消息格式
+3. **[ ] 定时盯盘（高优先）**：实现 `scripts/run_daemon.py`，使用 APScheduler 或 cron，在交易时段定时扫描
+4. **[ ] 云端部署（高优先）**：部署到 Google Cloud（Cloud Run 或 GCE），实现 7×24 盯盘
+5. **[ ] 信号去重**：避免同一机会在多次扫描中重复推送（需持久化支持）
+6. **[ ] SQLite 持久化**：实现 `src/database/`，存储历史信号，支持去重和回顾
+7. **[ ] 信号冲突检测**：同一报告内多个信号方向互相矛盾时告警或过滤（如 buy_put + sell_strangle 同时出现）
+8. **[ ] SHFE 铜 IV 补充**：集成 `option_vol_shfe()` 获取隐含波动率
+9. **[ ] 历史 IV 数据**：接入 QVIX 或其他历史 IV 数据源，提升 IV 分位数准确性
 
 ## Phase 3 规划
 
@@ -90,3 +94,16 @@
 3. **[ ] 多 Agent 分析**：针对复杂市场，引入多轮 LLM 对话（看多/看空辩论机制）
 4. **[ ] 回测框架**：评估历史信号质量
 5. **[ ] 盯盘 Dashboard**：简单 Web 页面展示历史信号
+
+---
+
+## 云端部署备忘（Phase 2 重点）
+
+目标平台：**Google Cloud**，推荐方案：
+- **Cloud Run**（无服务器，按需计费）：适合低频定时触发（配合 Cloud Scheduler）
+- **GCE e2-micro**（永久免费档）：适合常驻守护进程，每天交易时段内循环扫描
+
+关键注意事项：
+- 中国市场数据（AKShare/Sina）需确认 GCP 出口 IP 未被封锁，必要时加代理
+- 时区设置为 `Asia/Shanghai`，避免盯盘时段判断错误
+- 企业微信 Webhook 无需公网入口，直接从 GCP 外出调用即可

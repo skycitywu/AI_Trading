@@ -22,7 +22,7 @@ SYSTEM_PROMPT = """你是一位专业的期权交易分析师，专注于中国�
     {
       "action": "策略类型，如 sell_strangle / buy_call / sell_put / iron_condor 等",
       "legs": [
-        {"code": "合约代码", "direction": "buy 或 sell", "quantity": 1}
+        {"code": "合约代码", "name": "合约名称如50ETF沽4月3000", "direction": "buy 或 sell", "quantity": 1}
       ],
       "rationale": "交易理由（中文，3-5句话，包含关键数据支撑）",
       "risk_warning": "风险提示和止损建议",

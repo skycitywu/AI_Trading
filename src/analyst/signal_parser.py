@@ -36,6 +36,7 @@ def parse_llm_response(raw_response: str, underlying_name: str) -> AnalysisResul
                 code=leg.get("code", ""),
                 direction=leg.get("direction", ""),
                 quantity=int(leg.get("quantity", 1)),
+                name=leg.get("name", ""),
             )
             for leg in s.get("legs", [])
         ]

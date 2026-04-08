@@ -12,6 +12,7 @@ class SignalLeg:
     code: str                # 合约代码
     direction: str           # "buy" or "sell"
     quantity: int = 1
+    name: str = ""           # 合约名称，如"50ETF沽4月3000"
 
 
 @dataclass

@@ -4,6 +4,7 @@ from src.models.signal import AnalysisResult, TradingSignal
 
 CONFIDENCE_EMOJI = {"high": "🔴", "medium": "🟡", "low": "🟢"}
 DIRECTION_MAP = {"buy": "买入", "sell": "卖出"}
+URGENCY_MAP = {"immediate": "立即", "within_session": "当日内", "next_session": "下一交易日"}
 
 
 def format_analysis(result: AnalysisResult) -> str:
@@ -41,13 +42,15 @@ def _format_signal(index: int, sig: TradingSignal) -> str:
     lines = []
     lines.append(f"{'─' * 30}")
     lines.append(f"{emoji} 信号#{index}: {sig.action}")
-    lines.append(f"信心: {sig.confidence} | 紧急度: {sig.urgency}")
+    urgency_zh = URGENCY_MAP.get(sig.urgency, sig.urgency)
+    lines.append(f"信心: {sig.confidence} | 紧急度: {urgency_zh}")
 
     if sig.legs:
         lines.append("操作:")
         for leg in sig.legs:
             d = DIRECTION_MAP.get(leg.direction, leg.direction)
-            lines.append(f"  {d} {leg.code} x{leg.quantity}")
+            label = leg.name if leg.name else leg.code
+            lines.append(f"  {d} {label} x{leg.quantity}")
 
     if sig.rationale:
         lines.append(f"理由: {sig.rationale}")

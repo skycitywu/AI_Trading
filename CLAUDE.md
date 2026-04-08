@@ -104,6 +104,13 @@ LLM_API_BASE_URL=https://open.bigmodel.cn/api/paas/v4  # 可选，留空用默�
 LLM_MODEL=glm-4.5-air               # 可选，留空用默认值
 ```
 
+### 企业微信通知配置
+在企业微信管理后台（work.weixin.qq.com）→ **消息推送**（原"群机器人"）→ 添加，获取 Webhook 地址后：
+```env
+WECHAT_WEBHOOK_URL=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=你的key
+```
+不配置时，通知内容会打印到终端，不影响其他功能。
+
 ### 新增监控标的
 编辑 [config/instruments.py](config/instruments.py)，按格式添加 `Underlying` 对象即可。
 
