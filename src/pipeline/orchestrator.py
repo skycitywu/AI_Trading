@@ -95,12 +95,16 @@ class PipelineOrchestrator:
         )
 
         logger.info(f"Stage 3: 向 LLM 发送分析请求 (上下文 ~{len(snapshot_json)} 字符)")
+        logger.debug(f"[快照JSON]\n{snapshot_json}")
+        logger.debug(f"[系统提示词]\n{SYSTEM_PROMPT}")
+        logger.debug(f"[用户提示词]\n{user_prompt}")
         try:
             raw_response = self.llm.chat(SYSTEM_PROMPT, user_prompt)
         except Exception as e:
             logger.error(f"Stage 3 LLM 调用失败: {e}")
             return None
 
+        logger.debug(f"[LLM原始返回]\n{raw_response}")
         result = parse_llm_response(raw_response, underlying.name)
         logger.info(
             f"Stage 3 完成: 市场评估={result.market_assessment[:50]}... "

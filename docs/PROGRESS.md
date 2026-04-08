@@ -1,6 +1,6 @@
 # 项目进度
 
-## 当前状态：Phase 1 MVP 完成 ✅
+## 当前状态：Phase 1 MVP 完成 + 首次真实运行验证 ✅
 
 ---
 
@@ -45,13 +45,22 @@
 - [x] 数据获取测试：50ETF 42个合约，白糖178个，铜434个
 - [x] 四阶段端到端 Mock 测试通过（上下文约 6KB，< 3000 tokens）
 
+### Phase 1.5：首次真实运行（2026-04-08）
+- [x] 修复 `requirements.txt`：`py_vollib` 版本约束从 `>=1.0.3` 改为 `>=1.0.0`（PyPI 最新只有 1.0.1）
+- [x] LLM 配置外部化：`config/settings.py` 新增 `llm_api_base_url` / `llm_model` 字段，从 `.env` 读取，不再硬编码
+- [x] ETF 数据获取增强：`fund_etf_hist_em`（东方财富） → `stock_zh_a_hist` → `fund_etf_hist_sina`（新浪）三级降级，解决东方财富接口偶发断连
+- [x] ETF 标的价格兜底：三级接口全失败时，从 Delta≈0.5 的 ATM 合约行权价估算标的价格
+- [x] 文件日志：每次运行在 `logs/` 下生成带时间戳的 `.log` 文件，终端输出 INFO，文件记录 DEBUG（含提示词、LLM 原始返回）
+- [x] 信号详情打印：`run_once.py` 末尾打印市场评估 + 信号腿/理由/风险提示
+- [x] 全流程真实验证：GLM-4.5-air 成功返回信号（sell strangle 50ETF，IV分位72%）
+
 ---
 
 ## 已知问题 / 技术债
 
 | 问题 | 严重程度 | 说明 |
 |------|---------|------|
-| 东方财富接口偶发断连 | 中 | 影响 ETF 历史行情和实时行情，目前 ETF 价格用历史最新K线替代 |
+| 东方财富接口偶发断连 | 低 | 已增加三级降级：em → stock_zh_a_hist → fund_etf_hist_sina；价格全失败时从ATM行权价估算 |
 | DCE 大商所接口不可用 | 低 | 豆粕期权暂时移除，可定期测试是否恢复 |
 | SHFE 铜期权无 IV | 低 | 需单独调用 `option_vol_shfe()` 补充 |
 | ETF OI 为 0 | 低 | Sina Greeks 接口不含持仓量，已在筛选器中处理（OI=0时跳过OI过滤） |
@@ -65,9 +74,11 @@
 
 优先级从高到低：
 
-1. **[ ] 完整测试**：配置真实 LLM API key，跑完整流水线，评估信号质量
+1. **[x] 完整测试**：配置真实 LLM API key（智谱 GLM-4.5-air），全流程跑通，信号质量待持续评估
 2. **[ ] SHFE 铜 IV 补充**：集成 `option_vol_shfe()` 获取隐含波动率
 3. **[ ] 历史 IV 数据**：接入 QVIX 或其他历史 IV 数据源，提升 IV 分位数准确性
+2. **[ ] 企业微信通知**：配置真实 Webhook URL，验证通知推送
+3. **[ ] SHFE 铜 IV 补充**：集成 `option_vol_shfe()` 获取隐含波动率
 4. **[ ] SQLite 持久化**：实现 `src/database/`，存储历史信号
 5. **[ ] APScheduler 定时任务**：实现 `scripts/run_daemon.py`
 6. **[ ] 信号去重**：避免同一机会在多次扫描中重复推送

@@ -12,8 +12,11 @@ logger = logging.getLogger(__name__)
 
 class ZhipuLLM(BaseLLM):
     def __init__(self):
-        self.client = ZhipuAI(api_key=settings.zhipu_api_key)
-        self.model = "glm-4-plus"
+        client_kwargs = {"api_key": settings.zhipu_api_key}
+        if settings.llm_api_base_url:
+            client_kwargs["base_url"] = settings.llm_api_base_url
+        self.client = ZhipuAI(**client_kwargs)
+        self.model = settings.llm_model or "glm-4-plus"
 
     def chat(self, system_prompt: str, user_prompt: str) -> str:
         try:

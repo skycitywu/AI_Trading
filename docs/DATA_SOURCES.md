@@ -47,13 +47,29 @@ ak.option_sse_spot_price_sina(symbol="10011105")
 # 字段: 买量/卖量/最新价/持仓量/涨幅/昨收/开盘/成交量/成交额/五档盘口 等
 ```
 
-#### 标的 ETF 历史日线
+#### 标的 ETF 历史日线（三级降级，自动切换）
+
 ```python
+# 一级（东方财富，偶发断连）
 ak.fund_etf_hist_em(symbol="510050", period="daily",
                     start_date="20260101", end_date="20260407", adjust="")
 # 返回列: 日期, 开盘, 收盘, 最高, 最低, 成交量, 成交额, 振幅, 涨跌幅, 涨跌额, 换手率
-# ⚠️ 使用东方财富接口，偶发连接断开
+
+# 二级（东方财富备用，同样偶发断连）
+ak.stock_zh_a_hist(symbol="510050", period="daily",
+                   start_date="20260101", end_date="20260407", adjust="")
+# 返回列: 日期, 开盘, 收盘, 最高, 最低, 成交量, 成交额 ...
+
+# 三级（新浪，稳定，无需日期参数，返回全量历史）✅ 实测稳定
+ak.fund_etf_hist_sina(symbol="sh510050")
+# 返回列: date, prevclose, open, high, low, close, volume, amount
+# ⚠️ symbol 格式为 sh510050（需加交易所前缀）
+# ⚠️ 返回全量历史（5000+条），代码中取最近 N 条
 ```
+
+#### 标的 ETF 实时价格（兜底策略）
+若上述三个接口全部失败，从期权链中找 Delta 最接近 0.5 的 call 合约，以其行权价估算标的价格。
+误差通常在一个行权价档位以内（约 ±0.05 元）。
 
 #### 到期月份列表
 ```python

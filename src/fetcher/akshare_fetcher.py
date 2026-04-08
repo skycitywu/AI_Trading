@@ -113,6 +113,18 @@ class AKShareFetcher(BaseFetcher):
 
         logger.info(f"ETF期权获取完成: calls={len(calls)}, puts={len(puts)}")
 
+        # 兜底: 若行情接口全部失败，从 ATM call (Delta≈0.5) 的行权价估算标的价格
+        if quote.price == 0 and calls:
+            atm_call = min(calls, key=lambda c: abs(c.greeks.delta - 0.5))
+            estimated_price = atm_call.strike
+            logger.warning(f"标的价格获取失败，用ATM行权价估算: {estimated_price}")
+            quote = Quote(
+                code=quote.code, name=quote.name,
+                price=estimated_price, change_pct=0,
+                open=estimated_price, high=estimated_price, low=estimated_price,
+                pre_close=estimated_price, volume=0, amount=0,
+            )
+
         return OptionChain(
             underlying=quote,
             volatility=VolatilityData(),
@@ -122,59 +134,97 @@ class AKShareFetcher(BaseFetcher):
         )
 
     def _fetch_etf_quote(self, underlying: Underlying) -> Quote:
-        """获取 ETF 最新行情 (从历史日线取最新一条)"""
-        try:
-            end = datetime.now().strftime("%Y%m%d")
-            start = (datetime.now() - timedelta(days=10)).strftime("%Y%m%d")
-            df = ak.fund_etf_hist_em(
+        """获取 ETF 最新行情，优先东方财富，失败则用 stock_zh_a_hist 备用"""
+        end = datetime.now().strftime("%Y%m%d")
+        start = (datetime.now() - timedelta(days=10)).strftime("%Y%m%d")
+
+        for fetch_fn, kwargs, col in [
+            (ak.fund_etf_hist_em, dict(
                 symbol=underlying.code, period="daily",
                 start_date=start, end_date=end, adjust="",
-            )
-            if df.empty:
-                raise ValueError("空数据")
-            row = df.iloc[-1]
-            return Quote(
-                code=underlying.code,
-                name=underlying.name,
-                price=float(row["收盘"]),
-                change_pct=float(row["涨跌幅"]),
-                open=float(row["开盘"]),
-                high=float(row["最高"]),
-                low=float(row["最低"]),
-                pre_close=float(row.get("昨收", row["开盘"])),
-                volume=float(row["成交量"]),
-                amount=float(row["成交额"]),
-            )
-        except Exception as e:
-            logger.warning(f"获取ETF行情失败 {underlying.code}: {e}")
-            return Quote(
-                code=underlying.code, name=underlying.name,
-                price=0, change_pct=0, open=0, high=0, low=0,
-                pre_close=0, volume=0, amount=0,
-            )
+            ), {"close": "收盘", "change_pct": "涨跌幅", "open": "开盘", "high": "最高",
+                "low": "最低", "pre_close": "昨收", "volume": "成交量", "amount": "成交额"}),
+            (ak.stock_zh_a_hist, dict(
+                symbol=underlying.code, period="daily",
+                start_date=start, end_date=end, adjust="",
+            ), {"close": "收盘", "change_pct": "涨跌幅", "open": "开盘", "high": "最高",
+                "low": "最低", "pre_close": "昨收", "volume": "成交量", "amount": "成交额"}),
+            (ak.fund_etf_hist_sina, dict(
+                symbol=f"sh{underlying.code}",
+            ), {"close": "close", "change_pct": None, "open": "open", "high": "high",
+                "low": "low", "pre_close": "prevclose", "volume": "volume", "amount": "amount"}),
+        ]:
+            try:
+                df = fetch_fn(**kwargs)
+                if df is None or df.empty:
+                    continue
+                row = df.iloc[-1]
+                pre_close_col = col["pre_close"]
+                pre_close = float(row[pre_close_col]) if pre_close_col and pre_close_col in row.index else float(row[col["open"]])
+                return Quote(
+                    code=underlying.code,
+                    name=underlying.name,
+                    price=float(row[col["close"]]),
+                    change_pct=float(row[col["change_pct"]]) if col["change_pct"] and col["change_pct"] in row.index else 0,
+                    open=float(row[col["open"]]),
+                    high=float(row[col["high"]]),
+                    low=float(row[col["low"]]),
+                    pre_close=pre_close,
+                    volume=float(row[col["volume"]]),
+                    amount=float(row[col["amount"]]) if col["amount"] and col["amount"] in row.index else 0,
+                )
+            except Exception as e:
+                logger.warning(f"获取ETF行情失败 [{fetch_fn.__name__}] {underlying.code}: {e}")
+
+        return Quote(
+            code=underlying.code, name=underlying.name,
+            price=0, change_pct=0, open=0, high=0, low=0,
+            pre_close=0, volume=0, amount=0,
+        )
 
     def _fetch_etf_history(self, underlying: Underlying, days: int) -> list[dict]:
-        """获取 ETF 历史日线"""
+        """获取 ETF 历史日线，优先东方财富，失败则用 stock_zh_a_hist 备用"""
         end = datetime.now().strftime("%Y%m%d")
         start = (datetime.now() - timedelta(days=days * 2)).strftime("%Y%m%d")
-        try:
-            df = ak.fund_etf_hist_em(
+
+        # 三个备用接口: 东方财富 → stock_zh_a_hist → 网易163
+        sources = [
+            (ak.fund_etf_hist_em, dict(
                 symbol=underlying.code, period="daily",
                 start_date=start, end_date=end, adjust="",
-            )
-            records = []
-            for _, row in df.iterrows():
-                records.append({
-                    "date": str(row["日期"]),
-                    "close": float(row["收盘"]),
-                    "high": float(row["最高"]),
-                    "low": float(row["最低"]),
-                    "volume": float(row["成交量"]),
-                })
-            return records[-days:]
-        except Exception as e:
-            logger.error(f"获取ETF历史数据失败: {e}")
-            return []
+            ), {"日期": "日期", "收盘": "收盘", "最高": "最高", "最低": "最低", "成交量": "成交量"}),
+            (ak.stock_zh_a_hist, dict(
+                symbol=underlying.code, period="daily",
+                start_date=start, end_date=end, adjust="",
+            ), {"日期": "日期", "收盘": "收盘", "最高": "最高", "最低": "最低", "成交量": "成交量"}),
+            (ak.fund_etf_hist_sina, dict(
+                symbol=f"sh{underlying.code}",
+            ), {"日期": "date", "收盘": "close", "最高": "high", "最低": "low", "成交量": "volume"}),
+        ]
+
+        for fetch_fn, kwargs, col_map in sources:
+            try:
+                df = fetch_fn(**kwargs)
+                if df is None or df.empty:
+                    continue
+                # 过滤日期范围（163接口不支持传入日期参数）
+                if "日期" in df.columns:
+                    df = df[df["日期"] >= start]
+                records = []
+                for _, row in df.iterrows():
+                    records.append({
+                        "date": str(row[col_map["日期"]]),
+                        "close": float(row[col_map["收盘"]]),
+                        "high": float(row[col_map["最高"]]),
+                        "low": float(row[col_map["最低"]]),
+                        "volume": float(row[col_map["成交量"]]),
+                    })
+                logger.info(f"ETF历史数据获取成功 [{fetch_fn.__name__}]: {len(records)} 条")
+                return records[-days:]
+            except Exception as e:
+                logger.error(f"获取ETF历史数据失败 [{fetch_fn.__name__}]: {e}")
+
+        return []
 
     # ── 商品期货期权 ──────────────────────────────────────────
 

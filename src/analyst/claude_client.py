@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class ClaudeLLM(BaseLLM):
     def __init__(self):
         self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        self.model = "claude-sonnet-4-20250514"
+        self.model = settings.llm_model or "claude-sonnet-4-20250514"
 
     def chat(self, system_prompt: str, user_prompt: str) -> str:
         try:

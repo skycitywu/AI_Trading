@@ -24,11 +24,34 @@ from src.pipeline.orchestrator import PipelineOrchestrator
 
 
 def setup_logging():
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    from pathlib import Path
+    from datetime import datetime
+
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+    log_file = log_dir / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+
+    fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    datefmt = "%H:%M:%S"
+
+    # 终端: INFO 级别
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    console.setFormatter(logging.Formatter(fmt, datefmt=datefmt))
+
+    # 文件: DEBUG 级别（包含提示词、LLM 原始返回等详细信息）
+    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(logging.Formatter(fmt, datefmt=datefmt))
+
+    root = logging.getLogger()
+    root.setLevel(logging.DEBUG)
+    root.addHandler(console)
+    root.addHandler(file_handler)
+
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # 屏蔽 httpx 请求噪音
+
+    logging.getLogger("run_once").info(f"日志文件: {log_file.resolve()}")
 
 
 def main():
@@ -100,6 +123,22 @@ def main():
     logger.info(f"扫描完成: {len(results)}/{len(targets)} 个标的成功")
     total_signals = sum(len(r.signals) for r in results)
     logger.info(f"共发现 {total_signals} 个交易信号")
+
+    # 打印信号详情
+    for r in results:
+        if r.market_assessment:
+            logger.info(f"\n[{r.underlying}] 市场评估:\n  {r.market_assessment}")
+        if r.signals:
+            for i, s in enumerate(r.signals, 1):
+                legs_str = ", ".join(f"{leg.direction} {leg.code}" for leg in s.legs)
+                logger.info(
+                    f"\n[信号{i}] {s.underlying} | 策略: {s.action} | 置信度: {s.confidence}\n"
+                    f"  腿: {legs_str}\n"
+                    f"  理由: {s.rationale}\n"
+                    f"  风险: {s.risk_warning}"
+                )
+        elif r.no_action_reasons:
+            logger.info(f"\n[{r.underlying}] 无信号原因: {'; '.join(r.no_action_reasons)}")
 
 
 if __name__ == "__main__":
