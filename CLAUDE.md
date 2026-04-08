@@ -84,8 +84,8 @@ AI_Trading/
 ## 重要注意事项
 
 ### 数据源稳定性
-- **Sina 新浪接口**（ETF期权 Greeks/行情）：稳定可用
-- **东方财富(em)接口**：偶尔连接被断，影响 ETF 历史行情获取
+- **Sina 新浪接口**（ETF期权 Greeks/行情、ETF历史日线）：稳定可用
+- **东方财富(em)接口**：偶尔连接被断；ETF 历史数据已实现三级降级（em → stock_zh_a_hist → fund_etf_hist_sina），自动切换
 - **CZCE/SHFE 交易所日数据**：稳定，含 Delta + IV
 - **DCE 大商所接口**：当前不可用（JSON decode error），豆粕期权暂时移除
 - 详见 [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md)
@@ -95,10 +95,13 @@ AI_Trading/
 # 用 Claude
 LLM_PROVIDER=claude
 ANTHROPIC_API_KEY=sk-ant-xxx
+LLM_MODEL=claude-sonnet-4-20250514   # 可选，留空用默认值
 
 # 用智谱 GLM
 LLM_PROVIDER=zhipu
 ZHIPU_API_KEY=xxx
+LLM_API_BASE_URL=https://open.bigmodel.cn/api/paas/v4  # 可选，留空用默认值
+LLM_MODEL=glm-4.5-air               # 可选，留空用默认值
 ```
 
 ### 新增监控标的
