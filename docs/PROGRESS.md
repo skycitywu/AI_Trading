@@ -79,9 +79,9 @@
 
 1. **[x] 完整测试**：配置真实 LLM API key（智谱 GLM-4.5-air），全流程跑通，信号质量待持续评估
 2. **[x] 企业微信通知**：配置真实 Webhook URL，验证通知推送，优化消息格式
-3. **[ ] 定时盯盘（高优先）**：实现 `scripts/run_daemon.py`，使用 APScheduler 或 cron，在交易时段定时扫描
-4. **[ ] 云端部署（高优先）**：部署到 Google Cloud（Cloud Run 或 GCE），实现 7×24 盯盘
-5. **[ ] 信号去重**：避免同一机会在多次扫描中重复推送（需持久化支持）
+3. **[x] 定时盯盘**：`scripts/run_daemon.py`，APScheduler 定时 + 交易时段判断（9:30-11:30, 13:00-15:00 CST）
+4. **[ ] 云端部署（高优先）**：部署到 GCE e2-micro，systemd 守护进程（`deploy/ai-trading.service`）
+5. **[x] 信号去重（内存版）**：基于内容指纹的日内去重，避免同一信号重复推送
 6. **[ ] SQLite 持久化**：实现 `src/database/`，存储历史信号，支持去重和回顾
 7. **[ ] 信号冲突检测**：同一报告内多个信号方向互相矛盾时告警或过滤（如 buy_put + sell_strangle 同时出现）
 8. **[ ] SHFE 铜 IV 补充**：集成 `option_vol_shfe()` 获取隐含波动率
@@ -99,11 +99,21 @@
 
 ## 云端部署备忘（Phase 2 重点）
 
-目标平台：**Google Cloud**，推荐方案：
-- **Cloud Run**（无服务器，按需计费）：适合低频定时触发（配合 Cloud Scheduler）
-- **GCE e2-micro**（永久免费档）：适合常驻守护进程，每天交易时段内循环扫描
+### 已确定方案：GCE e2-micro 常驻进程（2026-04-09）
 
-关键注意事项：
-- 中国市场数据（AKShare/Sina）需确认 GCP 出口 IP 未被封锁，必要时加代理
+- **机型**：e2-micro，us-central1（Iowa），Debian 12
+- **出口 IP**：136.115.177.32
+- **网络验证**：AKShare 新浪接口 ✅、企业微信 Webhook ✅（中国数据源均可访问）
+- **选择理由**：需要高频盯盘（5-15分钟/次）+ 进程内信号去重状态，Cloud Run 冷启动不适合
+
+### 部署规划
+
+1. 写 `scripts/run_daemon.py`（APScheduler + 交易时段 9:30-15:00 CST 判断）
+2. 克隆代码到 VM，配置 `.env`（LLM key + WeChat Webhook）
+3. 用 systemd 管理守护进程，开机自启 + 崩溃自动重启
+4. Python 环境：VM 上用 `~/venv`（Debian 12 不允许系统级 pip）
+
+### 关键注意事项
 - 时区设置为 `Asia/Shanghai`，避免盯盘时段判断错误
 - 企业微信 Webhook 无需公网入口，直接从 GCP 外出调用即可
+- GCP 出站费用可忽略（出站均为小 HTTP 请求，月费 < $0.01）

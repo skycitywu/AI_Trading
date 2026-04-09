@@ -53,6 +53,12 @@ python3 scripts/run_once.py --etf
 
 # 8. 只扫描商品期权
 python3 scripts/run_once.py --commodity
+
+# 9. 启动定时盯盘守护进程（交易时段自动扫描）
+python3 scripts/run_daemon.py
+
+# 10. 守护进程只盯特定标的
+python3 scripts/run_daemon.py --code 510050
 ```
 
 ## 项目结构
@@ -76,7 +82,9 @@ AI_Trading/
 │   └── database/          # SQLite 持久化（Phase 2）
 ├── scripts/
 │   ├── run_once.py        # 手动触发入口
-│   └── run_daemon.py      # 定时守护进程（Phase 2）
+│   └── run_daemon.py      # 定时守护进程（APScheduler + 交易时段判断 + 信号去重）
+├── deploy/
+│   └── ai-trading.service # systemd 单元文件（GCE 部署用）
 ├── docs/                  # 项目文档
 └── tests/
 ```

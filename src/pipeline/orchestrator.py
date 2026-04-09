@@ -30,7 +30,7 @@ class PipelineOrchestrator:
         self.fetcher = fetcher
         self.llm = llm
 
-    def scan_underlying(self, underlying: Underlying) -> AnalysisResult | None:
+    def scan_underlying(self, underlying: Underlying, notify: bool = True) -> AnalysisResult | None:
         """对单个标的执行完整的四阶段分析流水线"""
         logger.info(f"{'='*50}")
         logger.info(f"开始分析: {underlying.name}")
@@ -112,18 +112,21 @@ class PipelineOrchestrator:
         )
 
         # ── Stage 4: 通知 ──
-        message = format_analysis(result)
-        send_wechat(message)
-        logger.info(f"Stage 4 完成: 通知已发送")
+        if notify:
+            message = format_analysis(result)
+            send_wechat(message)
+            logger.info(f"Stage 4 完成: 通知已发送")
+        else:
+            logger.info(f"Stage 4 跳过: notify=False")
 
         return result
 
-    def scan_all(self, underlyings: list[Underlying]) -> list[AnalysisResult]:
+    def scan_all(self, underlyings: list[Underlying], notify: bool = True) -> list[AnalysisResult]:
         """扫描所有监控标的"""
         results = []
         for u in underlyings:
             try:
-                result = self.scan_underlying(u)
+                result = self.scan_underlying(u, notify=notify)
                 if result:
                     results.append(result)
             except Exception as e:
