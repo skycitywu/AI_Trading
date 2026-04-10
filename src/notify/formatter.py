@@ -1,5 +1,7 @@
 """信号格式化 — 将结构化信号转为人类可读消息"""
 
+from __future__ import annotations
+
 from src.models.signal import AnalysisResult, TradingSignal
 
 CONFIDENCE_EMOJI = {"high": "🔴", "medium": "🟡", "low": "🟢"}
@@ -8,30 +10,40 @@ URGENCY_MAP = {"immediate": "立即", "within_session": "当日内", "next_sessi
 
 
 def format_analysis(result: AnalysisResult) -> str:
-    """将分析结果格式化为微信消息文本"""
+    """将单个标的的分析结果格式化为消息文本"""
     lines = []
-    lines.append(f"📊 【{result.underlying}】期权分析报告")
-    lines.append(f"⏰ {result.created_at.strftime('%Y-%m-%d %H:%M')}")
-    lines.append("")
+    lines.append(f"📊 【{result.underlying}】")
+    lines.append(f"📈 {result.market_assessment}" if result.market_assessment else "")
 
-    # 市场评估
-    if result.market_assessment:
-        lines.append(f"📈 市场评估:")
-        lines.append(result.market_assessment)
-        lines.append("")
-
-    # 交易信号
     if result.signals:
-        lines.append(f"🎯 发现 {len(result.signals)} 个交易信号:")
-        lines.append("")
+        lines.append(f"🎯 {len(result.signals)} 个信号:")
         for i, sig in enumerate(result.signals, 1):
             lines.append(_format_signal(i, sig))
-            lines.append("")
     else:
-        lines.append("✅ 当前无推荐交易信号")
+        lines.append("✅ 无推荐信号")
         if result.no_action_reasons:
             for reason in result.no_action_reasons:
                 lines.append(f"  - {reason}")
+
+    return "\n".join(lines)
+
+
+def format_scan_round(results: list[AnalysisResult]) -> str:
+    """将一轮扫描的所有结果合并为一条消息"""
+    if not results:
+        return ""
+
+    ts = results[0].created_at.strftime("%Y-%m-%d %H:%M")
+    total_signals = sum(len(r.signals) for r in results)
+
+    lines = []
+    lines.append(f"📋 AI Trading 扫描报告")
+    lines.append(f"⏰ {ts} | {len(results)} 个标的 | {total_signals} 个信号")
+    lines.append("")
+
+    for result in results:
+        lines.append(format_analysis(result))
+        lines.append("")
 
     return "\n".join(lines)
 

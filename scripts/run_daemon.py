@@ -31,7 +31,7 @@ from config.settings import Settings
 from src.analyst.llm_factory import create_llm
 from src.fetcher.akshare_fetcher import AKShareFetcher
 from src.models.signal import AnalysisResult, TradingSignal
-from src.notify.formatter import format_analysis
+from src.notify.formatter import format_scan_round
 from src.notify.dispatcher import send_notify
 from src.pipeline.orchestrator import PipelineOrchestrator
 
@@ -137,9 +137,10 @@ def run_scan(pipeline: PipelineOrchestrator, targets: list):
         logger.error(f"扫描异常: {e}", exc_info=True)
         return
 
-    # 去重后发送通知
+    # 去重后合并发送通知
     total_new = 0
     total_dup = 0
+    notify_results = []
     for result in results:
         new_signals = []
         for sig in result.signals:
@@ -161,16 +162,19 @@ def run_scan(pipeline: PipelineOrchestrator, targets: list):
                 raw_response=result.raw_response,
                 created_at=result.created_at,
             )
-            message = format_analysis(deduped)
-            send_notify(message)
+            notify_results.append(deduped)
             logger.info(
-                f"{result.underlying}: 发送 {len(new_signals)} 个新信号"
+                f"{result.underlying}: {len(new_signals)} 个新信号"
                 f" (过滤 {dup_count} 个重复)"
             )
         elif result.signals:
             logger.info(
                 f"{result.underlying}: {len(result.signals)} 个信号均已推送过，跳过"
             )
+
+    if notify_results:
+        message = format_scan_round(notify_results)
+        send_notify(message)
 
     logger.info(f"扫描完成: {len(results)} 个标的, {total_new} 个新信号, {total_dup} 个重复过滤")
 
