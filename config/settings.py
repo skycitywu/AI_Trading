@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     # WeChat
     wechat_webhook_url: Optional[str] = None
 
+    # PushPlus
+    pushplus_token: Optional[str] = None
+    pushplus_topic: Optional[str] = None
+
     # Database
     database_url: str = "sqlite:///data/trading.db"
 

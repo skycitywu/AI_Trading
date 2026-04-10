@@ -17,10 +17,7 @@ def send_wechat(content: str) -> bool:
     """
     url = settings.wechat_webhook_url
     if not url:
-        logger.warning("未配置 WECHAT_WEBHOOK_URL，跳过微信通知")
-        print("── 微信通知（未配置webhook，打印到终端）──")
-        print(content)
-        print("── 结束 ──")
+        logger.debug("未配置 WECHAT_WEBHOOK_URL，跳过企业微信通知")
         return False
 
     # 企业微信文本消息限制 2048 字符

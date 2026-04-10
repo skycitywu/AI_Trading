@@ -76,7 +76,7 @@ AI_Trading/
 │   ├── fetcher/           # Stage 1: 数据获取
 │   ├── compute/           # Stage 2: 指标计算（HV/IV/Greeks/筛选）
 │   ├── analyst/           # Stage 3: LLM 分析决策
-│   ├── notify/            # Stage 4: 企业微信通知
+│   ├── notify/            # Stage 4: 通知（企业微信 + PushPlus）
 │   ├── pipeline/          # 编排器（串联四阶段）
 │   ├── models/            # 数据模型（dataclass）
 │   └── database/          # SQLite 持久化（Phase 2）
@@ -112,12 +112,21 @@ LLM_API_BASE_URL=https://open.bigmodel.cn/api/paas/v4  # 可选，留空用默�
 LLM_MODEL=glm-4.5-air               # 可选，留空用默认值
 ```
 
-### 企业微信通知配置
-在企业微信管理后台（work.weixin.qq.com）→ **消息推送**（原"群机器人"）→ 添加，获取 Webhook 地址后：
+### 通知渠道配置
+支持企业微信和 PushPlus 两个渠道，可同时启用。两个都不配置时，通知内容打印到终端。
+
+**企业微信**（内部群机器人）：
 ```env
 WECHAT_WEBHOOK_URL=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=你的key
 ```
-不配置时，通知内容会打印到终端，不影响其他功能。
+
+**PushPlus**（微信公众号推送，适合外部用户）：
+1. 关注"pushplus推送加"公众号，登录官网获取 Token
+2. 创建群组，将群组码分享给接收人（接收人也需关注该公众号并订阅群组）
+```env
+PUSHPLUS_TOKEN=你的token
+PUSHPLUS_TOPIC=群组码   # 不填则只推给自己
+```
 
 ### 新增监控标的
 编辑 [config/instruments.py](config/instruments.py)，按格式添加 `Underlying` 对象即可。

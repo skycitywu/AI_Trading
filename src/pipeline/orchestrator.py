@@ -20,7 +20,7 @@ from src.fetcher.base import BaseFetcher
 from src.models.market import VolatilityData
 from src.models.signal import AnalysisResult
 from src.notify.formatter import format_analysis
-from src.notify.wechat import send_wechat
+from src.notify.dispatcher import send_notify
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +114,7 @@ class PipelineOrchestrator:
         # ── Stage 4: 通知 ──
         if notify:
             message = format_analysis(result)
-            send_wechat(message)
+            send_notify(message)
             logger.info(f"Stage 4 完成: 通知已发送")
         else:
             logger.info(f"Stage 4 跳过: notify=False")

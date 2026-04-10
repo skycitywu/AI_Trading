@@ -32,7 +32,7 @@ from src.analyst.llm_factory import create_llm
 from src.fetcher.akshare_fetcher import AKShareFetcher
 from src.models.signal import AnalysisResult, TradingSignal
 from src.notify.formatter import format_analysis
-from src.notify.wechat import send_wechat
+from src.notify.dispatcher import send_notify
 from src.pipeline.orchestrator import PipelineOrchestrator
 
 logger = logging.getLogger("daemon")
@@ -162,7 +162,7 @@ def run_scan(pipeline: PipelineOrchestrator, targets: list):
                 created_at=result.created_at,
             )
             message = format_analysis(deduped)
-            send_wechat(message)
+            send_notify(message)
             logger.info(
                 f"{result.underlying}: 发送 {len(new_signals)} 个新信号"
                 f" (过滤 {dup_count} 个重复)"
@@ -216,7 +216,7 @@ def main():
     signal.signal(signal.SIGINT, shutdown)
 
     # 启动通知
-    send_wechat(
+    send_notify(
         f"🤖 AI Trading 守护进程已启动\n"
         f"扫描间隔: {settings.scan_interval_minutes} 分钟\n"
         f"监控标的: {target_names}"
@@ -230,7 +230,7 @@ def main():
         logger.info("定时调度已启动，等待下一次扫描...")
         scheduler.start()
     finally:
-        send_wechat("🛑 AI Trading 守护进程已停止")
+        send_notify("🛑 AI Trading 守护进程已停止")
         logger.info("守护进程已退出")
 
 
