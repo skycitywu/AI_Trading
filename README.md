@@ -53,7 +53,7 @@
 
 ```bash
 # 1. 登录云服务器
-gcloud compute ssh instance-20260409-143859 --zone us-central1-a --tunnel-through-iap
+gcloud compute ssh 你的实例名 --zone us-central1-a --tunnel-through-iap
 
 # 2. 编辑环境变量
 nano ~/AI_Trading/.env
@@ -89,13 +89,13 @@ LLM_MODEL=glm-4.5-air  # 成本极低，速度快
 
 ```bash
 # 查看服务状态
-gcloud compute ssh instance-20260409-143859 --zone us-central1-a --tunnel-through-iap --command "sudo systemctl status ai-trading --no-pager"
+gcloud compute ssh 你的实例名 --zone us-central1-a --tunnel-through-iap --command "sudo systemctl status ai-trading --no-pager"
 
 # 实时查看最新运行日志 (追踪 LLM 调用和扫描进度)
-gcloud compute ssh instance-20260409-143859 --zone us-central1-a --tunnel-through-iap --command "sudo journalctl -u ai-trading -f"
+gcloud compute ssh 你的实例名 --zone us-central1-a --tunnel-through-iap --command "sudo journalctl -u ai-trading -f"
 
 # 查看完整的历史 Debug 日志 (包含发给 LLM 的原始 Prompt)
-gcloud compute ssh instance-20260409-143859 --zone us-central1-a --tunnel-through-iap --command "cat ~/AI_Trading/logs/daemon_$(date +%Y%m%d).log"
+gcloud compute ssh 你的实例名 --zone us-central1-a --tunnel-through-iap --command "cat ~/AI_Trading/logs/daemon_$(date +%Y%m%d).log"
 ```
 
 ### 5. 调整扫描频率或目标
