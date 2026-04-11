@@ -1,10 +1,10 @@
 # 项目进度
 
-## 当前状态：Phase 1 完整打通，企业微信通知上线 ✅
+## 当前状态：Phase 2 云端自动盯盘部署完成 ✅
 
 ---
 
-## 已完成（Phase 1）
+## 已完成（Phase 1 & 2）
 
 ### 基础设施
 - [x] 项目结构搭建（config / src / scripts / docs / tests）
@@ -45,17 +45,11 @@
 - [x] 数据获取测试：50ETF 42个合约，白糖178个，铜434个
 - [x] 四阶段端到端 Mock 测试通过（上下文约 6KB，< 3000 tokens）
 
-### Phase 1.5：首次真实运行 + 通知打通（2026-04-08）
-- [x] 修复 `requirements.txt`：`py_vollib` 版本约束从 `>=1.0.3` 改为 `>=1.0.0`（PyPI 最新只有 1.0.1）
-- [x] LLM 配置外部化：`config/settings.py` 新增 `llm_api_base_url` / `llm_model` 字段，从 `.env` 读取，不再硬编码
-- [x] ETF 数据获取增强：`fund_etf_hist_em`（东方财富） → `stock_zh_a_hist` → `fund_etf_hist_sina`（新浪）三级降级，解决东方财富接口偶发断连
-- [x] ETF 标的价格兜底：三级接口全失败时，从 Delta≈0.5 的 ATM 合约行权价估算标的价格
-- [x] 文件日志：每次运行在 `logs/` 下生成带时间戳的 `.log` 文件，终端输出 INFO，文件记录 DEBUG（含提示词、LLM 原始返回）
-- [x] 信号详情打印：`run_once.py` 末尾打印市场评估 + 信号腿/理由/风险提示
-- [x] 全流程真实验证：GLM-4.5-air 成功返回信号（sell strangle 50ETF，IV分位72%）
-- [x] 企业微信通知打通：配置群机器人 Webhook（企业微信"消息推送"功能，原"群机器人"）
-- [x] 通知格式优化：合约操作腿显示名称（如"50ETF沽4月3000"）而非纯数字代码；urgency 字段汉化（within_session→当日内等）
-  - 修改范围：`SignalLeg` 加 `name` 字段、LLM prompt schema 加 `name`、`signal_parser` 解析 `name`、`formatter` 加 `URGENCY_MAP`
+### Phase 2：自动盯盘与云端部署（2026-04-11）
+- [x] 多渠道通知集成：新增 PushPlus 渠道，支持 `src/notify/dispatcher.py` 统一分发到微信群和个人微信
+- [x] 扫描结果聚合：将单轮 4 个标的的扫描结果聚合成一条推送消息（`format_scan_round`），避免连续发信刷屏
+- [x] GCE 服务器部署：通过 GCP IAP 隧道连接，全自动化克隆代码、建立 venv 并运行 `requirements.txt`
+- [x] Systemd 守护进程：配置 `ai-trading.service` 注册为系统级服务，实现开机自启、崩溃重启、脱离终端 24 小时后台运行
 
 ---
 
@@ -73,21 +67,17 @@
 
 ---
 
-## 下一步（Phase 2）
+## 下一步（Phase 3）
 
 优先级从高到低：
 
-1. **[x] 完整测试**：配置真实 LLM API key（智谱 GLM-4.5-air），全流程跑通，信号质量待持续评估
-2. **[x] 企业微信通知**：配置真实 Webhook URL，验证通知推送，优化消息格式
-3. **[x] 定时盯盘**：`scripts/run_daemon.py`，APScheduler 定时 + 交易时段判断（9:30-11:30, 13:00-15:00 CST）
-4. **[ ] 云端部署（高优先）**：部署到 GCE e2-micro，systemd 守护进程（`deploy/ai-trading.service`）
-5. **[x] 信号去重（内存版）**：基于内容指纹的日内去重，避免同一信号重复推送
-6. **[ ] SQLite 持久化**：实现 `src/database/`，存储历史信号，支持去重和回顾
-7. **[ ] 信号冲突检测**：同一报告内多个信号方向互相矛盾时告警或过滤（如 buy_put + sell_strangle 同时出现）
-8. **[ ] SHFE 铜 IV 补充**：集成 `option_vol_shfe()` 获取隐含波动率
-9. **[ ] 历史 IV 数据**：接入 QVIX 或其他历史 IV 数据源，提升 IV 分位数准确性
+1. **[ ] SQLite 持久化**：实现 `src/database/`，存储历史信号，支持基于持久化的防重复推送，支持历史回溯
+2. **[ ] 信号冲突检测**：同一报告内多个信号方向互相矛盾时告警或过滤（如 buy_put + sell_strangle 同时出现）
+3. **[ ] 调度优化**：按用户需求将 `IntervalTrigger` 改为 `CronTrigger`，使轮询对齐自然时钟（如 :00 和 :30）
+4. **[ ] SHFE 铜 IV 补充**：集成 `option_vol_shfe()` 获取隐含波动率
+5. **[ ] 历史 IV 数据**：接入 QVIX 或其他历史 IV 数据源，提升 IV 分位数准确性
 
-## Phase 3 规划
+## Phase 4 规划
 
 1. **[ ] Pobo 桥接探索**：测试 Pobo 平台内是否支持 HTTP 请求，建立数据桥接
 2. **[ ] DCE 大商所恢复**：待接口可用后重新接入豆粕期权
@@ -97,23 +87,12 @@
 
 ---
 
-## 云端部署备忘（Phase 2 重点）
+## 云端部署备忘
 
-### 已确定方案：GCE e2-micro 常驻进程（2026-04-09）
+### 已部署完成方案：GCE e2-micro 常驻进程（2026-04-11）
 
 - **机型**：e2-micro，us-central1（Iowa），Debian 12
-- **出口 IP**：136.115.177.32
-- **网络验证**：AKShare 新浪接口 ✅、企业微信 Webhook ✅（中国数据源均可访问）
-- **选择理由**：需要高频盯盘（5-15分钟/次）+ 进程内信号去重状态，Cloud Run 冷启动不适合
-
-### 部署规划
-
-1. 写 `scripts/run_daemon.py`（APScheduler + 交易时段 9:30-15:00 CST 判断）
-2. 克隆代码到 VM，配置 `.env`（LLM key + WeChat Webhook）
-3. 用 systemd 管理守护进程，开机自启 + 崩溃自动重启
-4. Python 环境：VM 上用 `~/venv`（Debian 12 不允许系统级 pip）
-
-### 关键注意事项
-- 时区设置为 `Asia/Shanghai`，避免盯盘时段判断错误
-- 企业微信 Webhook 无需公网入口，直接从 GCP 外出调用即可
-- GCP 出站费用可忽略（出站均为小 HTTP 请求，月费 < $0.01）
+- **连接方式**：绕过原生 SSH 报错限制，通过 GCP IAP (Identity-Aware Proxy) 隧道打通 `gcloud compute ssh` 访问
+- **依赖环境**：系统不自带 `python3-venv`，已执行 `sudo apt-get install python3-venv`。运行目录为 `~/AI_Trading`
+- **进程管理**：使用 systemd 配置守护进程 `ai-trading.service`，实现崩溃重启和开机启动
+- **日志管理**：通过 `journalctl -u ai-trading -f` 查看实时 stdout 日志，也可以使用 `cat logs/daemon_xxx.log` 查看文件内的 DEBUG 明细
