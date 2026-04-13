@@ -117,20 +117,66 @@
 LLM 每轮获取到的 JSON 态势感知数据包类似如下结构：
 ```json
 {
-  "scan_time": "2026-04-13 14:30:00",
+  "scan_time": "2026-04-10 11:20:57",
   "underlying": {
-    "code": "510050", "name": "50ETF", "price": 2.501,
-    "ma5": 2.49, "ma20": 2.45, "ma60": 2.40,
-    "rsi14": 65.2, "trend": "bullish"
+    "code": "510050",
+    "name": "50ETF",
+    "price": 2.958,
+    "change_pct": 0,
+    "volume": 375617671.0,
+    "ma5": 2.9326,
+    "ma20": 2.9529,
+    "ma60": 3.0749,
+    "rsi14": 46.0,
+    "trend": "neutral_bullish"
   },
   "volatility": {
-    "hv10": 12.5, "hv20": 13.1, "hv60": 15.2,
-    "iv_atm": 18.5, "iv_percentile": 82.5, "iv_rank": 75.0,
-    "iv_vs_hv": "iv_premium(+5.4)"
+    "hv10": 18.81,
+    "hv20": 18.98,
+    "hv60": 14.9,
+    "iv_atm": 13.56,
+    "iv_percentile": 66.0,
+    "iv_rank": 46.5,
+    "iv_vs_hv": "iv_discount(-5.4)"
   },
   "candidates": [
-    // 包含几十个经过初步过滤的合约的具体信息
-    // 字段：代码, 类型(C/P), 行权价, 剩余天数, 最新价, IV, 成交量, 持仓量, Greeks(Delta/Gamma/Theta/Vega)
+    {
+      "code": "10011106",
+      "name": "50ETF购4月3000",
+      "type": "call",
+      "strike": 3.0,
+      "expiry": "2026-04-22",
+      "days_to_expiry": 11,
+      "last_price": 0.0178,
+      "iv": 12.7,
+      "volume": 65174,
+      "open_interest": 0,
+      "greeks": {
+        "delta": 0.3992,
+        "gamma": 4.7274,
+        "theta": -0.5263,
+        "vega": 0.2082
+      }
+    },
+    {
+      "code": "10011115",
+      "name": "50ETF沽4月3000",
+      "type": "put",
+      "strike": 3.0,
+      "expiry": "2026-04-22",
+      "days_to_expiry": 11,
+      "last_price": 0.041,
+      "iv": 13.56,
+      "volume": 54070,
+      "open_interest": 0,
+      "greeks": {
+        "delta": -0.596,
+        "gamma": 4.7403,
+        "theta": -0.4907,
+        "vega": 0.2082
+      }
+    }
+    // ... 此处省略其他几十个符合初筛条件的候选合约 ...
   ]
 }
 ```
