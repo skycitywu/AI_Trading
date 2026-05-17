@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import hashlib
 import logging
 import signal
@@ -42,6 +43,10 @@ MORNING_START = time(9, 30)
 MORNING_END = time(11, 30)
 AFTERNOON_START = time(13, 0)
 AFTERNOON_END = time(15, 0)
+
+# 单次扫描超时（秒）。akshare 内部无超时参数，必须在外层兜底，
+# 否则一次卡死的 HTTP 请求会让 APScheduler 因 max_instances=1 永远跳过后续任务。
+SCAN_TIMEOUT_SECONDS = 600
 
 # ── 去重状态 ──
 _seen_signals: set[str] = set()
@@ -131,8 +136,22 @@ def run_scan(pipeline: PipelineOrchestrator, targets: list):
 
     _reset_dedup_if_new_day()
 
+    # 每次扫描用独立的一次性 executor，超时后即便线程卡死也只是泄漏一个 daemon 线程，
+    # 不会回过头来阻塞下一次扫描（这是上一次 4/24 卡死后整月不推送的根因）。
+    executor = concurrent.futures.ThreadPoolExecutor(
+        max_workers=1, thread_name_prefix="scan"
+    )
+    future = executor.submit(pipeline.scan_all, targets, False)
+    executor.shutdown(wait=False)  # 不等待，超时的线程让它自生自灭
     try:
-        results = pipeline.scan_all(targets, notify=False)
+        results = future.result(timeout=SCAN_TIMEOUT_SECONDS)
+    except concurrent.futures.TimeoutError:
+        logger.error(f"扫描超时（>{SCAN_TIMEOUT_SECONDS}s），放弃本轮")
+        try:
+            send_notify(f"⚠️ AI Trading 扫描超时（>{SCAN_TIMEOUT_SECONDS}s），本轮已放弃")
+        except Exception:
+            pass
+        return
     except Exception as e:
         logger.error(f"扫描异常: {e}", exc_info=True)
         return
