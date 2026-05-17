@@ -5,9 +5,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=jerky2009
-WorkingDirectory=/home/jerky2009/AI_Trading
-ExecStart=/home/jerky2009/venv/bin/python scripts/run_daemon.py
+User=wufeng
+WorkingDirectory=/home/wufeng/AI_Trading
+ExecStart=/home/wufeng/venv/bin/python scripts/run_daemon.py
 Restart=on-failure
 RestartSec=60
 Environment=PYTHONUNBUFFERED=1
