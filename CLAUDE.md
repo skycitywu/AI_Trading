@@ -23,7 +23,7 @@ AI 驱动的中国期权市场交易信号 Agent：自动获取行情、计算�
 
 - **Python 3.9+**（注意：需要 `from __future__ import annotations` 兼容类型注解）
 - **数据源**：AKShare（免费，中国期权市场）
-- **LLM**：支持 Claude API (Anthropic) 和 智谱 GLM，通过 `LLM_PROVIDER` 环境变量切换
+- **LLM**：支持 Claude API (Anthropic)、智谱 GLM、Google Gemini，通过 `LLM_PROVIDER` 环境变量切换
 - **配置**：pydantic-settings，从 `.env` 读取
 
 ## 开发命令
@@ -110,7 +110,14 @@ LLM_PROVIDER=zhipu
 ZHIPU_API_KEY=xxx
 LLM_API_BASE_URL=https://open.bigmodel.cn/api/paas/v4  # 可选，留空用默认值
 LLM_MODEL=glm-4.5-air               # 可选，留空用默认值
+
+# 用 Gemini (Google AI Studio)
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini-3-flash-preview     # 或 gemini-3.1-pro-preview (需付费 key)
+GEMINI_API_KEY=AIza...               # 在 .env 中切换免费/付费 key 即可
 ```
+
+> 说明：免费 key 只能用 Flash / Flash-Lite 系列，Pro 系列会 429；付费 key 全部可用。要切换 key，直接改 `.env` 里的 `GEMINI_API_KEY` 值。
 
 ### 通知渠道配置
 支持企业微信和 PushPlus 两个渠道，可同时启用。两个都不配置时，通知内容打印到终端。

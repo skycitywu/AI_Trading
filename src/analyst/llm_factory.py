@@ -12,5 +12,8 @@ def create_llm() -> BaseLLM:
     elif provider == "zhipu":
         from src.analyst.zhipu_client import ZhipuLLM
         return ZhipuLLM()
+    elif provider == "gemini":
+        from src.analyst.gemini_client import GeminiLLM
+        return GeminiLLM()
     else:
         raise ValueError(f"不支持的 LLM provider: {provider}")

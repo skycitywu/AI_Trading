@@ -5,11 +5,12 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # LLM
-    llm_provider: str = Field(default="claude", description="claude or zhipu")
+    llm_provider: str = Field(default="claude", description="claude, zhipu, or gemini")
     llm_api_base_url: Optional[str] = None
     llm_model: Optional[str] = None
     anthropic_api_key: Optional[str] = None
     zhipu_api_key: Optional[str] = None
+    gemini_api_key: Optional[str] = None
 
     # WeChat
     wechat_webhook_url: Optional[str] = None

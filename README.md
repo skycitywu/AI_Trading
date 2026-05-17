@@ -66,10 +66,17 @@ sudo systemctl restart ai-trading
 
 在 `.env` 中修改：
 ```ini
-# 使用智谱 GLM (默认)
-LLM_PROVIDER=zhipu
-ZHIPU_API_KEY=你的_API_KEY
-LLM_MODEL=glm-4.5-air  # 成本极低，速度快
+# 使用 Google Gemini (当前默认)
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=AIza...
+LLM_MODEL=gemini-3-flash-preview  # 免费 key 可用, 1M 上下文
+# Pro 系列示例: LLM_MODEL=gemini-3.1-pro-preview (需付费 Tier 1 key)
+
+# 使用智谱 GLM
+# LLM_PROVIDER=zhipu
+# ZHIPU_API_KEY=你的_API_KEY
+# LLM_API_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+# LLM_MODEL=glm-4.5-air
 
 # 使用 Anthropic Claude
 # LLM_PROVIDER=claude
