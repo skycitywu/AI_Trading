@@ -18,6 +18,7 @@ AI 驱动的中国期权市场交易信号 Agent：自动获取行情、计算�
 | [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md) | AKShare 接口调研：哪些可用/不可用、字段说明 |
 | [docs/STRATEGY.md](docs/STRATEGY.md) | 期权交易策略说明 |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | 项目进度、已完成事项、下一步计划 |
+| [docs/GCE_DEPLOYMENT.md](docs/GCE_DEPLOYMENT.md) | GCE 部署完整手册（首次部署 + 迭代发布 + 坑总结） |
 
 ## 技术栈速览
 
@@ -140,3 +141,40 @@ PUSHPLUS_TOPIC=群组码   # 不填则只推给自己
 
 ### 修改策略参数
 编辑 [config/strategies.py](config/strategies.py)，调整 IV 分位数阈值、流动性过滤条件等。
+
+---
+
+## GCE 部署更新（迭代发布 playbook）
+
+线上运行在 GCE：systemd 服务 `ai-trading.service`，工作目录 `/home/wufeng/AI_Trading`，venv `/home/wufeng/venv`，SSH 必须走 IAP 隧道。实例名/区域用 `gcloud compute instances list` 查；首次部署、坑总结见 [docs/GCE_DEPLOYMENT.md](docs/GCE_DEPLOYMENT.md)。
+
+**每次代码改动上线就按这五步走，别重新探索：**
+
+```bash
+INSTANCE=<your-instance>; ZONE=<your-zone>   # 用 gcloud compute instances list 查
+
+# 1. 本地: 提交并推送 (只 add 本次相关文件, 别把无关 WIP 顺手带上)
+git add <相关文件...> && git commit -m "..." && git push origin master
+
+# 2. GCE: 拉新代码 (服务器有未提交本地改动时先 stash, 避免 pull 被 abort)
+gcloud compute ssh $INSTANCE --zone $ZONE --tunnel-through-iap --command \
+  "cd ~/AI_Trading && (git diff --quiet || git stash) && git pull"
+
+# 3. GCE: 装新依赖 (只在 requirements.txt 改了才跑)
+gcloud compute ssh $INSTANCE --zone $ZONE --tunnel-through-iap --command \
+  "/home/wufeng/venv/bin/pip install -r ~/AI_Trading/requirements.txt"
+
+# 4. GCE: 改 .env (只在新增/改 env 时; 必须先备份, 用 sed 精准改单行, 别整体覆盖)
+gcloud compute ssh $INSTANCE --zone $ZONE --tunnel-through-iap --command \
+  "cd ~/AI_Trading && cp .env .env.bak.$(date +%Y%m%d) && sed -i 's|^X=old\$|X=new|' .env && diff .env.bak.$(date +%Y%m%d) .env"
+
+# 5. GCE: 重启 + 看日志确认
+gcloud compute ssh $INSTANCE --zone $ZONE --tunnel-through-iap --command \
+  "sudo systemctl restart ai-trading && sleep 3 && sudo systemctl status ai-trading --no-pager | head -15 && sudo journalctl -u ai-trading -n 20 --no-pager"
+```
+
+**高频坑（详见 GCE_DEPLOYMENT.md）：**
+- `gcloud crashed (SSLError) UNEXPECTED_EOF_WHILE_READING`：IAP 隧道抖动，原命令重试即可。
+- `Your local changes would be overwritten by merge`：服务器有未提交修改。先 `git diff` 确认无价值，再 `git stash` 然后 pull，最后 `git stash drop`。
+- **永远不要在远程整体覆盖 .env**（会丢已有 token/key）。用 sed 改单行 + `.env.bak.YYYYMMDD-原因` 备份。
+- 旧 provider 配置注释保留在 .env 里作回退（如智谱配置）—— 不要直接删。
